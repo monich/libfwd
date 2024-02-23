@@ -1,0 +1,24 @@
+Source: libfwd
+Section: libs
+Priority: optional
+Maintainer: Slava Monich <slava@monich.com>
+Build-Depends: debhelper (>= 7), libgiorpc-dev, libglibutil-dev (>= 1.0.76), libglib2.0-dev (>= 2.48)
+Standards-Version: 3.8.4
+
+Package: libfwd
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, libglibutil (>= 1.0.76)
+Description: Connection forwarding library
+
+Package: libfwd-dev
+Section: libdevel
+Architecture: any
+Depends: libfwd (= ${binary:Version}), ${misc:Depends}, libglibutil-dev, libglib2.0-dev
+Description: Development files for libfwd
+
+Package: libfwd-tools
+Section: misc
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Forwarding tools

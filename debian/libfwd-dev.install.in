@@ -1,0 +1,3 @@
+debian/tmp/@LIBDIR@/libfwd.so @LIBDIR@
+debian/tmp/@LIBDIR@/pkgconfig/libfwd.pc @LIBDIR@/pkgconfig
+debian/tmp/usr/include/fwd usr/include/

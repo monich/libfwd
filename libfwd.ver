@@ -1,0 +1,21 @@
+FWD_1.0 {
+global:
+    fwd_log;
+    fwd_peer_add_local_datagram_forwarder;
+    fwd_peer_add_local_stream_forwarder;
+    fwd_peer_add_remote_datagram_forwarder;
+    fwd_peer_add_remote_stream_forwarder;
+    fwd_peer_add_socket_state_handler;
+    fwd_peer_add_state_handler;
+    fwd_peer_clear_handlers;
+    fwd_peer_new;
+    fwd_peer_new_with_rpc;
+    fwd_peer_ref;
+    fwd_peer_remove_forwarder;
+    fwd_peer_remove_handler;
+    fwd_peer_sync;
+    fwd_peer_unref;
+    fwd_version;
+local:
+    *;
+};

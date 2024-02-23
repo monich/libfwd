@@ -1,0 +1,41 @@
+fwd
+===
+
+Socket forwarding tool based on libfwd.
+
+Running it without any arguments starts it in the server mode. By default
+it's listening on port 2024 (adjustable via the command line):
+
+$ fwd
+
+Let's suppose it's started on the host called proxy. Then on the other host
+you can connect to it and forward e.g. UDP packets to port 53:
+
+$ fwd -l 5333:ns.google.com:53 proxy
+
+which redirects UDP packets sent locally to port 5333 to ns.google.com
+and delivers the replies back to the sender. In other words, something
+like this will actually resolve DNS requests via the proxy:
+
+$ dig -p 5333 @localhost github.com
+
+TCP connections can be forwarded too. To forward both UDP and TCP, you
+could do something like this:
+
+$ fwd -l 5333:ns.google.com:53  -L 5333:ns.google.com:53 proxy
+
+and then DNS resolution over TCP will work as well:
+
+$ dig +tcp -p 5333 @localhost github.com
+
+Security considerations
+-----------------------
+
+Note that the forwarding protocol provides no encryption, authentication
+or any other security features by itself. However one can pipe the data
+e.g. through ssh like this, to encrypt the network traffic:
+
+mkfifo pipe && fwd  -l 5333:ns.google.com:53 - < pipe | ssh proxy fwd - > pipe
+
+The - parameter tells fwd to use stdin/stdout rather than sockets for
+communicating with the peer.

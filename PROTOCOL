@@ -1,0 +1,262 @@
+Socket forwarding protocol
+=========================
+
+The interface implements something similar to ssh style tunneling.
+It's intended to use RPC mechanism provided by libgiorpc on top of
+an encrypted stream, such as FoilTLS. In other words, this library
+doesn't provide any encryption whatsoever, relying on the underlying
+protocols to provide one, instead. The access control peculiarities
+are also assumed to be handled by the RPC transport layer.
+
+This specification defines protocol version 1.
+
+1. Data structures
+   ---------------
+
+TLV encoded data is a sequence of TLVs (tag-length-value) records.
+Each TLV record has the following structure:
+
+   +---
+   |  T (unsigned MBN) : tag
+   +---
+   |  L (unsigned MBN) : length
+   +---
+   |  V (L bytes) : tag specific data
+   +---
+
+Tag must be non-zero. Length can be zero. Blocks with unknown tags
+are ignored.
+
+Unless otherwise noted, the order of records doesn't matter.
+
+Address family, protocol type and sockaddr layout are those used by
+Linux kernel. That must be kept in mind if this protocol needs to be
+implemented on some other platform(s).
+
+2. Control interface
+   -----------------
+
+IID = 0x4643 'FC'
+
+2.1. INFO
+
+Code: 1
+
+Queries the protocol information (e.g. the range of protocol versions
+supported by the peer).
+
+Input: none
+Output: TLV encoded data
+
+  Tag 1: protocol range (mandatory)
+  Value: 2 unsigned MBNs. The minimum supported version is followed by
+         the maximum one. The range is inclusive, e.g. [1,1] declares
+         support for a single protocol version 1. Obviously, the
+         maximum must be greater or equal to the minimum.
+
+  Tag 2: byte order (mandatory)
+  Value: 4 bytes containing 0x04030201 in the native byte order, e.g.
+         0x01 0x02 0x03 0x04 - Little Endian
+         0x04 0x03 0x02 0x01 - Big Endian
+
+2.2. ECHO
+
+Code: 2
+
+Sends back whatever was passed in (e.g. nothing). Could be used for
+generating keep-alive traffic. Since it doesn't make sense to send
+large amounts of data just to receive them back, the amount of data
+is limited by 127 bytes (meaning that the packet length field fits
+into a single byte).
+
+Input: [0..127] bytes of opaque data
+Output: copy of the input data
+
+2.3. SOCKET
+
+Code: 3
+
+Reserves socket id on the recipient's side and associates it with
+socket id on the sender's side and assigns address to it. This
+essentially combines socket() and bind() functionality. All other
+socket specific operations are performed over the socket interface
+defined in section 3.
+
+Input: TLV encoded data
+
+  Tag 1: sender's socket id (required)
+  Value: unsigned MBN
+
+  Tag 2: address family (optional, AF_INET by default)
+  Value: unsigned MBN. Typically AF_INET (2) or AF_INET6 (10)
+
+  Tag 3: protocol type (optional, SOCK_STREAM by default)
+  Value: unsigned MBN. Typically SOCK_STREAM (1) or SOCK_DGRAM (2)
+
+  Tag 4: requested binding address on the recipient's side (optional)
+  Value: blob. Contains sockaddr structure. Address family must match
+         the expectation, i.e. the one provided in tag 2 or AF_INET if
+         tag 2 is missing.
+
+  Tag 5: flags
+  Value: unsigned MBN. The following flags are defined:
+         0x01 (ReuseAddr) - allow reusing socket address.
+         0x02 (Listen)    - start listening. Listening sockets don't produce
+                            any data, they expect ACCEPT call(s) when the
+                            sender is ready to accept incoming connections.
+         0x04 (RetryAny)  - if binding to the requested address fails, try
+                            to bind to any address. Ignored if no binding
+                            address (tag 4) is specified.
+
+  Tag 6: listening backlog (optional, requires the Listen flag)
+  Value: unsigned MBN. When specified, must be non-zero
+
+  Tag 7: inactivity period for datagram connections in milliseconds (optional,
+         only applies to listening datagram sockets, otherwise ignored). When
+         specified, must be non-zero
+  Value: unsigned non-zero MBN
+
+  Tag 8: maximum number of active datagram connections (optional, only applies
+         to listening datagram sockets, otherwise ignored). When specified,
+         must be non-zero
+  Value: unsigned non-zero MBN
+
+Output: TLV encoded data
+
+  Tag 1: error (indicates a failure)
+  Value: unsigned MBN. Error code, e.g. EINVAL
+
+  Tag 2: socket id on the recipient's side (on success)
+  Value: unsigned MBN. The range is [1..0xfffffff] (up to 28 bits)
+
+  Tag 3: actual socket address the recipient's side (on success)
+  Value: blob. Contains sockaddr structure for the successfully
+         created socket.
+
+3. Socket interface
+   ----------------
+
+IID = 0x4653 'FS'
+
+
+2.1. ACCEPT
+
+Code: 1
+
+The target socket must be in the listening state (created with the Listen
+flag). This call will remain pending until either:
+
+a) a connection is accepted by a listening TCP socket; or
+b) a datagram is received by the "listening" UDP socket from a new remote
+   socket, i.e. the one for which there's no forwarding entry yet, or the
+   entry has expired.
+
+On success, the listening side creates a new socket id and returns
+it back to the caller. The caller responds with either ACCEPTED or
+CLOSE. The ACCEPTED call provides the couterpart socket id, CLOSE
+closes the socket.
+
+Several ACCEPT calls for the same socket are allowed to be submitted
+(and remain pending) simultaneously. They will be completed in the order
+in which they are submitted.
+
+Input: TLV encoded data
+
+  Tag 1: recipient's listening socket id (required)
+  Value: unsigned non-zero MBN
+
+Output: TLV encoded data
+
+  Tag 1: result (non-zero value indicates a failure)
+  Value: unsigned MBN. Zero on success, error code (e.g. EINVAL) on failure
+
+  Tag 2: recipients's socket id for the connected socket (required on success)
+  Value: unsigned non-zero MBN
+
+  Tag 3: source (remote) address of the connected client (required)
+  Value: blob. Contains sockaddr structure. Address family must match
+         the expectation, i.e. the one provided in the SOCKET call of
+         the listening socket.
+
+  Tag 4: destination address of the connection (required)
+  Value: blob. Contains sockaddr structure. Address family must match
+         the expectation, i.e. the one provided in the SOCKET call of
+         the listening socket.
+
+2.2. ACCEPTED
+
+Code: 2
+
+This is essentially a response to ACCEPT. Provides the other side with
+the socket id of the remote counterpart.
+
+Input: TLV encoded data
+
+  Tag 1: recipient's socket id returned by ACCEPT (required)
+  Value: unsigned non-zero MBN
+
+  Tag 2: sender's socket id for the accepted socket (required)
+  Value: unsigned non-zero MBN
+
+Output: none
+
+2.3. CONNECT
+
+Code: 3
+
+Connects the stream socket, sets the default destination address for
+datagram socket and tells it to start receiving the data.
+
+Input: TLV encoded data
+
+  Tag 1: sender's socket id (required)
+  Value: unsigned MBN
+
+  Tag 2: address to connect to (required)
+  Value: blob. Contains sockaddr structure. Address family must match
+       the expectation, i.e. the one provided in the SOCKET call.
+
+Output: TLV encoded data
+
+  Tag 1: result (non-zero value indicates a failure)
+  Value: unsigned MBN. Zero on success, error code (e.g. EINVAL) on failure
+
+2.4. DATA
+
+Code: 4
+
+Forwards the data to the recipient.
+
+Input: TLV encoded data
+
+  Tag 1: recipient's socket id (required)
+  Value: unsigned MBN
+
+  Tag 2: the data
+  Value: opaque binary data
+
+  Tag 3: remote sender's address (optional)
+  Value: sockaddr structure identifying the sender. It's only sent
+         when the remote sender's address is different from the last
+         known one. Which can only happen to datagram sockets.
+
+Output: TLV encoded data
+
+  Tag 1: error (indicates a failure)
+  Value: unsigned MBN. Error code, e.g. EINVAL
+
+  Tag 2: number of bytes sent (on success)
+  Value: unsigned MBN
+
+2.5. CLOSE
+
+Code: 5
+
+Closes the socket.
+
+Input: TLV encoded data
+
+  Tag 1: recipient's socket id (required)
+  Value: unsigned MBN
+
+Output: none

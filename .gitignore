@@ -1,0 +1,14 @@
+*~
+build
+unit/coverage/libfwd.gcov
+unit/coverage/report
+debian/.debhelper
+debian/files
+debian/*.debhelper.log
+debian/*.substvars
+debian/libfwd
+debian/libfwd-dev
+debian/libfwd-dev.install
+debian/libfwd-tools
+debian/libfwd.install
+debian/tmp

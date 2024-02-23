@@ -1,0 +1,12 @@
+libfwd
+======
+
+Connection forwarding library.
+
+Its functionality is similar to ssh tunneling except that it forwards
+connectionless UDP as well, by creating local + remote UDP socket pairs
+for each remote datagram source on the listening side.
+
+Note that the forwarding protocol provides no encryption, authentication
+or any other security features by itself. All that is the responsibility
+of the transport layer (i.e. the underlying GIOStream).
