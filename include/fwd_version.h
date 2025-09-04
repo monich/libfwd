@@ -46,7 +46,7 @@
  *
  * The versions with the same X.Y part are perfectly compatible both ways,
  * i.e. they export the same set of symbols. Increment of Z (release) part
- * essentially marks an internal bug fix.
+ * essentially marks an internal bug fix or some other kind of improvement.
  *
  * The versions with different X.Y part are backward compatible.
  *
@@ -56,8 +56,8 @@
 
 #define FWD_VERSION_MAJOR   1
 #define FWD_VERSION_MINOR   0
-#define FWD_VERSION_RELEASE 0
-#define FWD_VERSION_STRING  "1.0.0"
+#define FWD_VERSION_RELEASE 1
+#define FWD_VERSION_STRING  "1.0.1"
 
 /* Version as a single word */
 #define FWD_VERSION_(v1,v2,v3) \
@@ -76,6 +76,7 @@
 /* Specific versions */
 #define FWD_VERSION_1_0   FWD_VERSION_(1,0,0)
 #define FWD_VERSION_1_0_0 FWD_VERSION_(1,0,0)
+#define FWD_VERSION_1_0_1 FWD_VERSION_(1,0,1)
 
 #endif /* FWD_VERSION_H */
 

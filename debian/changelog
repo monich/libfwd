@@ -1,3 +1,9 @@
+libfwd (1.0.1) unstable; urgency=low
+
+  * Connect forwarded UDP sockets
+
+ -- Slava Monich <slava@monich.com>  Thu, 04 Sep 2025 18:21:42 +0300
+
 libfwd (1.0.0) unstable; urgency=low
 
   * Initial release
