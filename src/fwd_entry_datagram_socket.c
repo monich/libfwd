@@ -170,6 +170,7 @@ fwd_entry_datagram_socket_connect(
             fwd_format_inet_socket_address(to));
     }
 #endif /* GUTIL_LOG_DEBUG */
+    GASSERT(g_socket_connect(self->socket, G_SOCKET_ADDRESS(to), NULL, NULL));
     gutil_object_unref(self->to);
     g_object_ref(self->to = to);
     fwd_socket_service_connect_ok(req);
@@ -290,6 +291,8 @@ fwd_entry_datagram_socket_new(
     g_object_ref(self->socket = socket);
     if (to) {
         g_object_ref(self->to = to);
+        GASSERT(g_socket_connect(self->socket, G_SOCKET_ADDRESS(to),
+            NULL, NULL));
     }
     self->rid = rid;
     self->io_handler.cb = &datagram_socket_io;
