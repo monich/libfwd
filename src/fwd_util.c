@@ -419,22 +419,12 @@ fwd_inet_socket_address_equal(
     if (sa1 == sa2) {
         return TRUE;
     } else {
-        /*
-         * Not using g_socket_address_to_native(), to avoid unnecessarily
-         * allocating and/or copying the memory.
-         */
-       if (sa1 && sa2 &&
+        return sa1 && sa2 &&
             g_inet_socket_address_get_port(sa1) ==
-            g_inet_socket_address_get_port(sa2)) {
-            GInetAddress* ia1 = g_inet_socket_address_get_address(sa1);
-            GInetAddress* ia2 = g_inet_socket_address_get_address(sa2);
-            const gsize n = g_inet_address_get_native_size(ia1);
-
-            return g_inet_address_get_native_size(ia2) == n &&
-                !memcmp(g_inet_address_to_bytes(ia1),
-                    g_inet_address_to_bytes(ia2), n);
-        }
-        return FALSE;
+            g_inet_socket_address_get_port(sa2) &&
+            g_inet_address_equal(
+                g_inet_socket_address_get_address(sa1),
+                g_inet_socket_address_get_address(sa2));
     }
 }
 
